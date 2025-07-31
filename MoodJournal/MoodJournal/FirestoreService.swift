@@ -13,7 +13,8 @@ class FirestoreService {
             return
         }
 
-        print("📤 Firestore’a kayıt başlıyor: \(entry)")
+        print("📨 addMoodEntry çağrıldı - Kullanıcı ID: \(uid)")
+        print("📄 Gönderilen mood: \(entry.mood) - note: \(entry.note)")
 
         db.collection("users")
             .document(uid)
@@ -22,10 +23,10 @@ class FirestoreService {
             .setData(entry.asDictionary) { error in
                 if let error = error {
                     print("❌ Firestore setData hatası: \(error.localizedDescription)")
-                    completion(.failure(error))
+                    completion(.failure(error)) // ⚠️ Bu satır çalışıyor mu test et
                 } else {
                     print("✅ Firestore setData başarılı")
-                    completion(.success(()))
+                    completion(.success(())) // ⚠️ Bu satır çalışıyor mu test et
                 }
             }
     }

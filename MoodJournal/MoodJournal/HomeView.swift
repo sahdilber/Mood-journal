@@ -57,7 +57,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showNewEntry) {
                 NewEntryView {
-                    // onEntryAdded closure burada boş çünkü .onChange ile yakalıyoruz
+                    // ✅ Buraya closure'ı düzgün geçiriyoruz
+                    showNewEntry = false
+                    fetchEntries()
                 }
             }
             .onAppear {

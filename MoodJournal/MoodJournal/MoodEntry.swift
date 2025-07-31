@@ -10,7 +10,7 @@ struct MoodEntry: Identifiable, Equatable {
     // Firestore’a gönderilecek sözlük formatı
     var asDictionary: [String: Any] {
         return [
-            "id": id, // ✅ ID artık Firestore'a da gönderiliyor
+            "id": id,
             "mood": mood,
             "note": note,
             "date": Timestamp(date: date)

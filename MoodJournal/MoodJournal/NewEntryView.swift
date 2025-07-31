@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct NewEntryView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) var dismiss // ✅ modern yol
 
     @State private var selectedMood = ""
     @State private var note = ""
     @State private var isSaving = false
-    @State private var showSaved = false
 
     let moodOptions = ["😊", "😔", "😠", "😴", "🥳", "😢", "😇"]
     let firestoreService = FirestoreService()
@@ -44,22 +43,13 @@ struct NewEntryView: View {
                     .padding(.horizontal)
 
                 Button(action: saveEntry) {
-                    HStack {
-                        Spacer()
-                        if isSaving {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .padding(.trailing, 6)
-                        }
-                        Text(buttonLabel)
-                            .fontWeight(.semibold)
-                        Spacer()
-                    }
-                    .padding()
-                    .foregroundColor(.white)
-                    .background(isSaving ? Color.gray : Color.green)
-                    .cornerRadius(10)
-                    .padding(.horizontal)
+                    Text("Kaydet")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .foregroundColor(.white)
+                        .background(Color.green)
+                        .cornerRadius(10)
+                        .padding(.horizontal)
                 }
                 .disabled(isSaving)
 
@@ -70,39 +60,26 @@ struct NewEntryView: View {
         }
     }
 
-    var buttonLabel: String {
-        if isSaving {
-            return "Kaydediliyor..."
-        } else if showSaved {
-            return "Kaydedildi ✅"
-        } else {
-            return "Kaydet"
-        }
-    }
-
     func saveEntry() {
-        guard !selectedMood.isEmpty else { return }
+        guard !selectedMood.isEmpty else {
+            print("⚠️ Mood seçilmedi")
+            return
+        }
 
         isSaving = true
-        showSaved = false
+        print("⏳ Kayıt işlemi başlıyor...")
 
         let newEntry = MoodEntry(mood: selectedMood, note: note)
 
         firestoreService.addMoodEntry(newEntry) { result in
             DispatchQueue.main.async {
+                isSaving = false
                 switch result {
                 case .success:
-                    showSaved = true
-                    isSaving = false
-                    onEntryAdded?()
-                    print("🟢 Kayıt başarılı")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-
+                    print("🟢 NewEntryView → Firestore başarılı döndü.")
+                    onEntryAdded?() // Sheet kapatmayı HomeView yapar
                 case .failure(let error):
-                    isSaving = false
-                    print("❌ Firestore Hatası: \(error.localizedDescription)")
+                    print("❌ NewEntryView → Firestore hata verdi: \(error.localizedDescription)")
                 }
             }
         }
