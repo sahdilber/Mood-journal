@@ -6,11 +6,11 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authVM.user != nil {
-                HomeView()
+                MainContainerView() // 🔁 Giriş yapıldıysa 3 sayfalı yapıya geç
             } else {
                 LoginView()
             }
         }
-        .animation(.easeInOut, value: authVM.user) // ✅ Geçiş animasyonu
+        .animation(.easeInOut, value: authVM.user)
     }
 }

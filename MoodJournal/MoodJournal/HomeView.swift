@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @State private var moodEntries: [MoodEntry] = []
     @State private var showNewEntry = false
+    @State private var showStatistics = false
     @State private var errorMessage: String?
     @State private var listID = UUID()
     @State private var selectedEntryForEdit: MoodEntry?
@@ -40,17 +41,25 @@ struct HomeView: View {
                             }
                             .padding(.vertical, 4)
                             .onTapGesture {
-                                selectedEntryForEdit = entry // ✅ Edit için giriş
+                                selectedEntryForEdit = entry
                             }
                         }
                         .onDelete(perform: deleteMood)
                     }
-                    .id(listID) // 🔁 Liste yeniden oluşturulsun
+                    .id(listID)
                     .listStyle(.plain)
                 }
             }
             .navigationTitle("Mood Günlüğüm")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showStatistics = true
+                    } label: {
+                        Image(systemName: "chart.bar")
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showNewEntry = true
@@ -68,9 +77,12 @@ struct HomeView: View {
             .sheet(item: $selectedEntryForEdit) { entry in
                 EditEntryView(entry: entry) {
                     selectedEntryForEdit = nil
-                    fetchEntries()       // ✅ Edit sonrası veri çek
-                    listID = UUID()      // ✅ Listeyi sıfırla ki görünüm yenilensin
+                    fetchEntries()
+                    listID = UUID()
                 }
+            }
+            .sheet(isPresented: $showStatistics) {
+                StatisticsView()
             }
             .onAppear {
                 fetchEntries()
@@ -89,7 +101,7 @@ struct HomeView: View {
                 switch result {
                 case .success(let entries):
                     self.moodEntries = entries
-                    self.listID = UUID() // 🔁 Listeyi zorla yenile
+                    self.listID = UUID()
                     print("📥 HomeView → fetchEntries başarılı. Entry sayısı: \(entries.count)")
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
