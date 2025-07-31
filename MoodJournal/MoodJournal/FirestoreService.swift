@@ -5,16 +5,12 @@ import FirebaseAuth
 class FirestoreService {
     private let db = Firestore.firestore()
 
-    // MARK: - Mood Kaydı Ekleme
+    // Mood Ekle
     func addMoodEntry(_ entry: MoodEntry, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
-            print("🚫 Kullanıcı yok")
             completion(.failure(NSError(domain: "No user", code: 401)))
             return
         }
-
-        print("📨 addMoodEntry çağrıldı - Kullanıcı ID: \(uid)")
-        print("📄 Gönderilen mood: \(entry.mood) - note: \(entry.note)")
 
         db.collection("users")
             .document(uid)
@@ -22,15 +18,34 @@ class FirestoreService {
             .document(entry.id)
             .setData(entry.asDictionary) { error in
                 if let error = error {
-                    print("❌ Firestore setData hatası: \(error.localizedDescription)")
-                    completion(.failure(error)) // ⚠️ Bu satır çalışıyor mu test et
+                    completion(.failure(error))
                 } else {
-                    print("✅ Firestore setData başarılı")
-                    completion(.success(())) // ⚠️ Bu satır çalışıyor mu test et
+                    completion(.success(()))
                 }
             }
     }
-    // MARK: - Mood Kayıtlarını Getir
+
+    // Mood Güncelle
+    func updateMoodEntry(_ entry: MoodEntry, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(NSError(domain: "No user", code: 401)))
+            return
+        }
+
+        db.collection("users")
+            .document(uid)
+            .collection("moodEntries")
+            .document(entry.id)
+            .setData(entry.asDictionary, merge: true) { error in
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
+    }
+
+    // Mood Listele
     func fetchMoodEntries(completion: @escaping (Result<[MoodEntry], Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(.failure(NSError(domain: "No user", code: 401)))
@@ -55,15 +70,10 @@ class FirestoreService {
             }
     }
 
-    // MARK: - Tek Mood Kaydı Sil
+    // Mood Sil
     func deleteMoodEntry(_ entry: MoodEntry, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(.failure(NSError(domain: "No user", code: 401)))
-            return
-        }
-
-        guard !entry.id.isEmpty else {
-            completion(.failure(NSError(domain: "No entry ID", code: 400)))
             return
         }
 
@@ -80,7 +90,7 @@ class FirestoreService {
             }
     }
 
-    // MARK: - Çoklu Mood Kaydı Sil
+    // Çoklu Mood Sil
     func deleteMultipleMoodEntries(_ entries: [MoodEntry], completion: @escaping (Result<Void, Error>) -> Void) {
         let group = DispatchGroup()
         var deletionError: Error?

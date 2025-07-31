@@ -5,6 +5,7 @@ struct HomeView: View {
     @State private var showNewEntry = false
     @State private var errorMessage: String?
     @State private var listID = UUID()
+    @State private var selectedEntryForEdit: MoodEntry?
 
     let firestoreService = FirestoreService()
 
@@ -38,10 +39,13 @@ struct HomeView: View {
                                     .foregroundColor(.gray)
                             }
                             .padding(.vertical, 4)
+                            .onTapGesture {
+                                selectedEntryForEdit = entry // ✅ Edit için giriş
+                            }
                         }
                         .onDelete(perform: deleteMood)
                     }
-                    .id(listID) // 🔁 Listeyi sıfırdan oluştur (çökmeleri önle)
+                    .id(listID) // 🔁 Liste yeniden oluşturulsun
                     .listStyle(.plain)
                 }
             }
@@ -57,9 +61,15 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showNewEntry) {
                 NewEntryView {
-                    // ✅ Buraya closure'ı düzgün geçiriyoruz
                     showNewEntry = false
                     fetchEntries()
+                }
+            }
+            .sheet(item: $selectedEntryForEdit) { entry in
+                EditEntryView(entry: entry) {
+                    selectedEntryForEdit = nil
+                    fetchEntries()       // ✅ Edit sonrası veri çek
+                    listID = UUID()      // ✅ Listeyi sıfırla ki görünüm yenilensin
                 }
             }
             .onAppear {
@@ -67,7 +77,7 @@ struct HomeView: View {
             }
             .onChange(of: showNewEntry) {
                 if !showNewEntry {
-                    fetchEntries() // ✅ Sheet kapandıysa listeyi güvenli yenile
+                    fetchEntries()
                 }
             }
         }
@@ -79,7 +89,8 @@ struct HomeView: View {
                 switch result {
                 case .success(let entries):
                     self.moodEntries = entries
-                    self.listID = UUID() // 🔁 Listeyi sıfırla (çökmeleri önle)
+                    self.listID = UUID() // 🔁 Listeyi zorla yenile
+                    print("📥 HomeView → fetchEntries başarılı. Entry sayısı: \(entries.count)")
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -94,7 +105,7 @@ struct HomeView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    fetchEntries() // ✅ Silme sonrası güvenli yeniden yükleme
+                    fetchEntries()
                 case .failure(let error):
                     self.errorMessage = "Silme hatası: \(error.localizedDescription)"
                 }

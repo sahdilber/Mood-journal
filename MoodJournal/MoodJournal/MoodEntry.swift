@@ -25,7 +25,7 @@ struct MoodEntry: Identifiable, Equatable {
         self.date = date
     }
 
-    // Firestore'dan gelen veriyle model oluşturma (✅ documentID ile)
+    // Firestore'dan gelen veriyle model oluşturma
     init?(from dict: [String: Any], documentID: String) {
         guard let mood = dict["mood"] as? String,
               let note = dict["note"] as? String,
@@ -39,8 +39,11 @@ struct MoodEntry: Identifiable, Equatable {
         self.date = timestamp.dateValue()
     }
 
-    // Equatable sadece id’ye göre karşılaştırır
+    // 🔁 Artık içeriği değiştiğinde SwiftUI güncellemeyi fark edecek
     static func == (lhs: MoodEntry, rhs: MoodEntry) -> Bool {
-        return lhs.id == rhs.id
+        return lhs.id == rhs.id &&
+               lhs.mood == rhs.mood &&
+               lhs.note == rhs.note &&
+               lhs.date == rhs.date
     }
 }
