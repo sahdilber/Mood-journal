@@ -6,73 +6,77 @@ struct MoodStat: Identifiable {
     let count: Int
     var id: String { mood }
 }
-
 struct StatisticsView: View {
     @State private var moodStats: [MoodStat] = []
+    @State private var moodEntries: [MoodEntry] = []
     @State private var errorMessage: String?
-    @State private var isLoading = true
+    @State private var selectedTab = 0
 
     let firestoreService = FirestoreService()
+    let tabTitles = ["Grafik", "Takvim"]
 
     var body: some View {
         NavigationView {
-            VStack {
-                if let errorMessage = errorMessage {
-                    Text("⚠️ Hata: \(errorMessage)")
-                        .foregroundColor(.red)
-                        .padding(.top, 50)
-                    Spacer()
-                } else if isLoading {
-                    Spacer()
-                    ProgressView("Yükleniyor...")
-                        .progressViewStyle(CircularProgressViewStyle(tint: .orange))
-                        .scaleEffect(1.5)
-                    Spacer()
-                } else if moodStats.isEmpty {
-                    Spacer()
-                    Text("Hiç mood verisi bulunamadı.")
-                        .foregroundColor(.gray)
-                        .font(.headline)
-                    Spacer()
-                } else {
-                    VStack(alignment: .leading) {
-                        Text("Mood Dağılımı")
-                            .font(.title2.bold())
-                            .padding(.horizontal)
-
-                        Chart(moodStats) { stat in
-                            BarMark(
-                                x: .value("Mood", stat.mood),
-                                y: .value("Sayısı", stat.count)
-                            )
-                            .foregroundStyle(by: .value("Mood", stat.mood))
-                            .annotation(position: .top) {
-                                Text("\(stat.count)")
-                                    .font(.caption)
-                                    .foregroundColor(.primary)
-                            }
+            VStack(spacing: 16) {
+                // 📌 Üstte Sekmeli Geçiş
+                HStack {
+                    ForEach(0..<tabTitles.count, id: \.self) { index in
+                        Button {
+                            selectedTab = index
+                        } label: {
+                            Text(tabTitles[index])
+                                .fontWeight(.semibold)
+                                .padding(.vertical, 8)
+                                .frame(maxWidth: .infinity)
+                                .background(selectedTab == index ? Color.orange.opacity(0.2) : Color.clear)
+                                .cornerRadius(10)
                         }
-                        .frame(height: 300)
-                        .padding(.horizontal)
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.horizontal)
 
-                        Divider().padding(.top)
+                // 📄 Sayfa Görünümleri
+                TabView(selection: $selectedTab) {
+                    // Grafik Sayfası
+                    VStack {
+                        if let errorMessage = errorMessage {
+                            Text("Hata: \(errorMessage)")
+                                .foregroundColor(.red)
+                                .padding()
+                        } else if moodStats.isEmpty {
+                            Spacer()
+                            ProgressView("Yükleniyor...")
+                            Spacer()
+                        } else {
+                            Chart(moodStats) { stat in
+                                BarMark(
+                                    x: .value("Mood", stat.mood),
+                                    y: .value("Sayısı", stat.count)
+                                )
+                                .foregroundStyle(by: .value("Mood", stat.mood))
+                            }
+                            .frame(height: 300)
+                            .padding()
 
-                        List {
-                            ForEach(moodStats) { stat in
+                            List(moodStats) { stat in
                                 HStack {
                                     Text(stat.mood)
                                         .font(.largeTitle)
-                                    Text(moodName(for: stat.mood))
-                                        .font(.body)
                                     Spacer()
                                     Text("\(stat.count) kez")
-                                        .fontWeight(.medium)
                                 }
-                                .padding(.vertical, 6)
                             }
                         }
                     }
+                    .tag(0)
+
+                    // Takvim Sayfası
+                    CalendarView(moodEntries: moodEntries)
+                        .tag(1)
                 }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .animation(.easeInOut, value: selectedTab)
             }
             .navigationTitle("İstatistikler")
             .onAppear(perform: loadStats)
@@ -80,33 +84,22 @@ struct StatisticsView: View {
     }
 
     func loadStats() {
-        isLoading = true
         firestoreService.fetchMoodEntries { result in
             DispatchQueue.main.async {
-                isLoading = false
                 switch result {
                 case .success(let entries):
+                    self.moodEntries = entries
+
                     let grouped = Dictionary(grouping: entries, by: { $0.mood })
-                    let stats = grouped.map { MoodStat(mood: $0.key, count: $0.value.count) }
+                    let stats = grouped.map { (mood, group) in
+                        MoodStat(mood: mood, count: group.count)
+                    }
                     self.moodStats = stats.sorted { $0.count > $1.count }
+
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
             }
-        }
-    }
-
-    /// Emoji açıklamalarını gösteren yardımcı fonksiyon
-    func moodName(for emoji: String) -> String {
-        switch emoji {
-        case "😊": return "Mutlu"
-        case "😔": return "Üzgün"
-        case "😠": return "Sinirli"
-        case "😴": return "Yorgun"
-        case "🥳": return "Neşeli"
-        case "😢": return "Ağlamaklı"
-        case "😇": return "Huzurlu"
-        default: return ""
         }
     }
 }
