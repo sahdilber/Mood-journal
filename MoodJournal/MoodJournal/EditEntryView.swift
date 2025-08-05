@@ -22,58 +22,87 @@ struct EditEntryView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                Text("Modunu Düzenle")
-                    .font(.title2)
-                    .padding(.top)
+            ZStack {
+                // 🎨 Gradient arka plan
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 15) {
-                        ForEach(moodOptions, id: \.self) { mood in
-                            Text(mood)
-                                .font(.system(size: 40))
-                                .padding()
-                                .background(selectedMood == mood ? Color.blue.opacity(0.2) : Color.clear)
-                                .cornerRadius(12)
-                                .onTapGesture {
-                                    selectedMood = mood
-                                }
+                VStack(spacing: 24) {
+                    Text("Modunu Düzenle")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.top)
+
+                    // Mood seçenekleri
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 15) {
+                            ForEach(moodOptions, id: \.self) { mood in
+                                Text(mood)
+                                    .font(.system(size: 36))
+                                    .padding()
+                                    .background(selectedMood == mood ? Color.white.opacity(0.15) : Color.white.opacity(0.05))
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(selectedMood == mood ? Color.blue : Color.clear, lineWidth: 2)
+                                    )
+                                    .onTapGesture {
+                                        withAnimation {
+                                            selectedMood = mood
+                                        }
+                                    }
+                            }
                         }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
-                }
 
-                TextField("Notunu güncelle...", text: $note, axis: .vertical)
-                    .lineLimit(3...5)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
+                    // Not güncelleme alanı
+                    TextField("Notunu güncelle...", text: $note, axis: .vertical)
+                        .lineLimit(3...5)
+                        .padding()
+                        .background(Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.white.opacity(0.2))
+                        )
+                        .cornerRadius(14)
+                        .foregroundColor(.white)
+                        .padding(.horizontal)
 
-                Button(action: updateEntry) {
-                    HStack {
-                        Spacer()
-                        if isSaving {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .padding(.trailing, 6)
+                    // Kaydet butonu
+                    Button(action: updateEntry) {
+                        HStack {
+                            if isSaving {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .padding(.trailing, 6)
+                            }
+                            Text("Kaydet")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
                         }
-                        Text("Kaydet")
-                            .fontWeight(.semibold)
-                        Spacer()
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            LinearGradient(colors: [Color.orange, Color.pink], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .cornerRadius(16)
+                        .shadow(radius: 6)
                     }
-                    .padding()
-                    .foregroundColor(.white)
-                    .background(isSaving ? Color.gray : Color.orange)
-                    .cornerRadius(10)
+                    .disabled(isSaving)
                     .padding(.horizontal)
-                }
-                .disabled(isSaving)
 
-                Spacer()
+                    Spacer()
+                }
+                .padding()
+                .navigationTitle("Mood Düzenle")
+                .navigationBarTitleDisplayMode(.inline)
             }
-            .padding()
-            .navigationTitle("Mood Düzenle")
         }
     }
 
@@ -88,8 +117,7 @@ struct EditEntryView: View {
                 isSaving = false
                 switch result {
                 case .success:
-                    print("🟢 EditEntryView → Firestore güncelleme başarılı")
-                    onEntryUpdated?()     // 🔁 HomeView'da listeyi yeniler
+                    onEntryUpdated?()
                     dismiss()
                 case .failure(let error):
                     print("❌ Güncelleme hatası: \(error.localizedDescription)")

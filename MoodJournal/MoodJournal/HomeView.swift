@@ -12,59 +12,112 @@ struct HomeView: View {
 
     var body: some View {
         NavigationView {
-            VStack {
-                if let errorMessage = errorMessage {
-                    Text("Hata: \(errorMessage)")
-                        .foregroundColor(.red)
-                        .padding()
-                }
+            ZStack(alignment: .bottomTrailing) {
+                // 🎨 Gradient arka plan
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                if moodEntries.isEmpty {
-                    Spacer()
-                    Text("Hiç mood girişi yok.")
-                        .foregroundColor(.gray)
-                        .padding()
-                    Spacer()
-                } else {
-                    List {
-                        ForEach(moodEntries) { entry in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(entry.mood)
-                                    .font(.title2)
-                                if !entry.note.isEmpty {
-                                    Text(entry.note)
-                                        .font(.body)
-                                }
-                                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.vertical, 4)
-                            .onTapGesture {
-                                selectedEntryForEdit = entry
-                            }
-                        }
-                        .onDelete(perform: deleteMood)
+                VStack(spacing: 12) {
+                    if let errorMessage = errorMessage {
+                        Text("Hata: \(errorMessage)")
+                            .foregroundColor(.red)
+                            .padding()
                     }
-                    .id(listID)
-                    .listStyle(.plain)
+
+                    if moodEntries.isEmpty {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            Image(systemName: "face.smiling")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 60, height: 60)
+                                .foregroundColor(.white.opacity(0.5))
+
+                            Text("Hiç mood girişi yok.")
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        Spacer()
+                    } else {
+                        List {
+                            ForEach(moodEntries) { entry in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(alignment: .center, spacing: 16) {
+                                        // Emoji (Mood)
+                                        Text(entry.mood)
+                                            .font(.system(size: 34))
+
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            if !entry.note.isEmpty {
+                                                Text(entry.note)
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(.white)
+                                                    .lineLimit(2)
+                                            }
+                                            Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.6))
+                                        }
+
+                                        Spacer()
+                                    }
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(Color.white.opacity(0.05))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 20)
+                                                    .stroke(LinearGradient(
+                                                        colors: [Color.purple.opacity(0.5), Color.blue.opacity(0.5)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ), lineWidth: 1)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                                    )
+                                    .onTapGesture {
+                                        selectedEntryForEdit = entry
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                                .listRowBackground(Color.clear)
+                            }
+                            .onDelete(perform: deleteMood)
+                        }
+                        .id(listID)
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                    }
                 }
+                .padding()
+
+                // ➕ Yeni mood ekle butonu
+                Button(action: {
+                    showNewEntry = true
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Circle().fill(Color.blue))
+                        .shadow(radius: 6)
+                }
+                .padding()
             }
             .navigationTitle("Mood Günlüğüm")
+            .navigationBarTitleDisplayMode(.inline)
+            .foregroundColor(.white)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         showStatistics = true
                     } label: {
                         Image(systemName: "chart.bar")
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showNewEntry = true
-                    } label: {
-                        Image(systemName: "plus")
+                            .foregroundColor(.white)
                     }
                 }
             }
@@ -102,7 +155,6 @@ struct HomeView: View {
                 case .success(let entries):
                     self.moodEntries = entries
                     self.listID = UUID()
-                    print("📥 HomeView → fetchEntries başarılı. Entry sayısı: \(entries.count)")
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }

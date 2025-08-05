@@ -4,67 +4,107 @@ struct RegisterView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    
+
     @EnvironmentObject var authVM: AuthViewModel
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 25) {
-                Text("Kayıt Ol")
-                    .font(.title)
-                    .fontWeight(.bold)
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                TextField("Email", text: $email)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(10)
+                VStack(spacing: 28) {
+                    VStack(spacing: 6) {
+                        Text("Kayıt Ol")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
 
-                SecureField("Şifre (min 6 karakter)", text: $password)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(10)
-
-                SecureField("Şifre (tekrar)", text: $confirmPassword)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(10)
-
-                if let error = authVM.errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-
-                Button(action: {
-                    guard password == confirmPassword else {
-                        authVM.errorMessage = "Şifreler uyuşmuyor!"
-                        return
-                    }
-                    
-                    guard password.count >= 6 else {
-                        authVM.errorMessage = "Şifre en az 6 karakter olmalı!"
-                        return
+                        Text("Aramıza katıl, ruh halini kaydetmeye başla!")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
                     }
 
-                    authVM.signUp(email: email, password: password)
-                    // dismiss() çağırmıyoruz çünkü user güncellenince otomatik yönleniyor
-                }) {
-                    Text("Hesap Oluştur")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
+                    VStack(spacing: 16) {
+                        HStack {
+                            Image(systemName: "envelope")
+                                .foregroundColor(.gray)
+                            TextField("Email", text: $email)
+                                .keyboardType(.emailAddress)
+                                .autocapitalization(.none)
+                        }
                         .padding()
-                        .background(Color.green)
-                        .cornerRadius(10)
-                }
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2)))
 
-                Button("Zaten hesabım var") {
-                    // dismiss()
+                        HStack {
+                            Image(systemName: "lock")
+                                .foregroundColor(.gray)
+                            SecureField("Şifre (min 6 karakter)", text: $password)
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2)))
+
+                        HStack {
+                            Image(systemName: "lock.rotation")
+                                .foregroundColor(.gray)
+                            SecureField("Şifre (tekrar)", text: $confirmPassword)
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2)))
+                    }
+                    .foregroundColor(.white)
+
+                    if let error = authVM.errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                            .transition(.opacity)
+                    }
+
+                    Button(action: {
+                        guard password == confirmPassword else {
+                            authVM.errorMessage = "Şifreler uyuşmuyor!"
+                            return
+                        }
+
+                        guard password.count >= 6 else {
+                            authVM.errorMessage = "Şifre en az 6 karakter olmalı!"
+                            return
+                        }
+
+                        authVM.signUp(email: email, password: password)
+                    }) {
+                        Text("Hesap Oluştur")
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.green.gradient)
+                            .cornerRadius(14)
+                            .shadow(radius: 5)
+                    }
+
+                    Button("Zaten hesabım var") {
+                        dismiss()
+                    }
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.9))
+                    .underline()
                 }
-                .font(.footnote)
+                .padding()
+                .padding(.top, 50)
             }
-            .padding()
         }
     }
 }

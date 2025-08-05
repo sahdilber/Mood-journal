@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct NewEntryView: View {
-    @Environment(\.dismiss) var dismiss // ✅ modern yol
-
+    @Environment(\.dismiss) var dismiss
     @State private var selectedMood = ""
     @State private var note = ""
     @State private var isSaving = false
+    @State private var showMoodAlert = false
 
     let moodOptions = ["😊", "😔", "😠", "😴", "🥳", "😢", "😇"]
     let firestoreService = FirestoreService()
@@ -14,61 +14,109 @@ struct NewEntryView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                Text("Bugünkü modun nasıl?")
-                    .font(.title2)
-                    .padding(.top)
+            ZStack {
+                // 🎨 Arka plan
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 15) {
-                        ForEach(moodOptions, id: \.self) { mood in
-                            Text(mood)
-                                .font(.system(size: 40))
-                                .padding()
-                                .background(selectedMood == mood ? Color.blue.opacity(0.2) : Color.clear)
-                                .cornerRadius(12)
-                                .onTapGesture {
-                                    selectedMood = mood
-                                }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                TextField("Kısa bir not ekle...", text: $note, axis: .vertical)
-                    .lineLimit(3...5)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-
-                Button(action: saveEntry) {
-                    Text("Kaydet")
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                VStack(spacing: 24) {
+                    Text("Bugünkü modun nasıl?")
+                        .font(.title2)
+                        .fontWeight(.semibold)
                         .foregroundColor(.white)
-                        .background(Color.green)
-                        .cornerRadius(10)
-                        .padding(.horizontal)
-                }
-                .disabled(isSaving)
 
-                Spacer()
+                    // Seçili mood büyük göster
+                    if !selectedMood.isEmpty {
+                        Text(selectedMood)
+                            .font(.system(size: 72))
+                            .transition(.scale)
+                    }
+
+                    // Mood seçenekleri
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 15) {
+                            ForEach(moodOptions, id: \.self) { mood in
+                                Text(mood)
+                                    .font(.system(size: 36))
+                                    .padding()
+                                    .background(selectedMood == mood ? Color.white.opacity(0.15) : Color.white.opacity(0.05))
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(selectedMood == mood ? Color.blue : Color.clear, lineWidth: 2)
+                                    )
+                                    .onTapGesture {
+                                        withAnimation {
+                                            selectedMood = mood
+                                            showMoodAlert = false
+                                        }
+                                    }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // Not alanı
+                    TextField("Kısa bir not ekle...", text: $note, axis: .vertical)
+                        .lineLimit(3...5)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.08))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                        .foregroundColor(.white)
+                        .padding(.horizontal)
+
+                    // Uyarı mesajı
+                    if showMoodAlert {
+                        Text("Lütfen önce bir mood seç.")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .transition(.opacity)
+                    }
+
+                    // Kaydet butonu
+                    Button(action: saveEntry) {
+                        Text("Kaydet")
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(colors: [Color.purple, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .cornerRadius(16)
+                            .shadow(radius: 6)
+                    }
+                    .disabled(isSaving)
+                    .padding(.horizontal)
+
+                    Spacer()
+                }
+                .padding(.top)
+                .navigationTitle("Yeni Mood Girişi")
+                .navigationBarTitleDisplayMode(.inline)
             }
-            .padding()
-            .navigationTitle("Yeni Mood Girişi")
         }
     }
 
     func saveEntry() {
         guard !selectedMood.isEmpty else {
-            print("⚠️ Mood seçilmedi")
+            withAnimation {
+                showMoodAlert = true
+            }
             return
         }
 
         isSaving = true
-        print("⏳ Kayıt işlemi başlıyor...")
-
         let newEntry = MoodEntry(mood: selectedMood, note: note)
 
         firestoreService.addMoodEntry(newEntry) { result in
@@ -76,10 +124,9 @@ struct NewEntryView: View {
                 isSaving = false
                 switch result {
                 case .success:
-                    print("🟢 NewEntryView → Firestore başarılı döndü.")
-                    onEntryAdded?() // Sheet kapatmayı HomeView yapar
+                    onEntryAdded?()
                 case .failure(let error):
-                    print("❌ NewEntryView → Firestore hata verdi: \(error.localizedDescription)")
+                    print("❌ Kayıt hatası: \(error.localizedDescription)")
                 }
             }
         }
