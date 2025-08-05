@@ -12,106 +12,130 @@ struct CalendarView: View {
     var body: some View {
         let currentMonthDates = generateDatesForMonth(offset: currentMonthOffset)
 
-        VStack(spacing: 16) {
-            // 🔹 Ay Başlığı ve Oklar
-            HStack {
-                Button(action: { currentMonthOffset -= 1 }) {
-                    Image(systemName: "chevron.left")
+        ZStack {
+            // 🌌 Arka plan (LoginView'daki gibi)
+            LinearGradient(
+                gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                // 🔹 Ay Başlığı ve Oklar
+                HStack {
+                    Button(action: { currentMonthOffset -= 1 }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
+                    }
+
+                    Spacer()
+
+                    Text(monthYearText(from: selectedDate))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Button(action: { currentMonthOffset += 1 }) {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.horizontal)
+
+                // 🔹 Gün Başlıkları
+                HStack {
+                    ForEach(["P", "S", "Ç", "P", "C", "C", "P"], id: \.self) { day in
+                        Text(day)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
                 }
 
-                Spacer()
+                // 🔹 Takvim Günleri
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(currentMonthDates, id: \.self) { date in
+                        let isPlaceholder = calendar.isDate(date, equalTo: Date.distantPast, toGranularity: .day)
+                        let hasMood = moodEntries.contains { calendar.isDate($0.date, inSameDayAs: date) }
+                        let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
 
-                Text(monthYearText(from: selectedDate))
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
-                Button(action: { currentMonthOffset += 1 }) {
-                    Image(systemName: "chevron.right")
-                }
-            }
-            .padding(.horizontal)
-
-            // 🔹 Gün Başlıkları
-            HStack {
-                ForEach(["P", "S", "Ç", "P", "C", "C", "P"], id: \.self) { day in
-                    Text(day)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.gray)
-                }
-            }
-
-            // 🔹 Takvim Günleri
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(currentMonthDates, id: \.self) { date in
-                    let isPlaceholder = calendar.isDate(date, equalTo: Date.distantPast, toGranularity: .day)
-                    let hasMood = moodEntries.contains { calendar.isDate($0.date, inSameDayAs: date) }
-                    let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
-
-                    Button(action: {
-                        if !isPlaceholder {
-                            selectedDate = date
-                        }
-                    }) {
-                        ZStack {
+                        Button(action: {
                             if !isPlaceholder {
-                                Circle()
-                                    .fill(hasMood ? Color.blue.opacity(isSelected ? 0.5 : 0.2) : .clear)
-                                    .frame(width: 36, height: 36)
+                                selectedDate = date
+                            }
+                        }) {
+                            ZStack {
+                                if !isPlaceholder {
+                                    if hasMood {
+                                        Circle()
+                                            .fill(LinearGradient(
+                                                colors: [
+                                                    Color.blue.opacity(isSelected ? 0.8 : 0.3),
+                                                    Color.purple.opacity(isSelected ? 0.8 : 0.3)
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ))
+                                            .frame(width: 38, height: 38)
+                                    }
 
-                                Text("\(calendar.component(.day, from: date))")
+                                    Text("\(calendar.component(.day, from: date))")
+                                        .font(.body)
+                                        .foregroundColor(isSelected ? .white : .white.opacity(0.9))
+                                        .frame(width: 36, height: 36)
+                                }
+                            }
+                            .background(
+                                Circle()
+                                    .stroke(isSelected ? Color.white : Color.clear, lineWidth: 2)
+                            )
+                        }
+                        .disabled(isPlaceholder)
+                    }
+                }
+                .padding(.bottom)
+
+                Divider()
+                    .background(Color.white.opacity(0.3))
+
+                // 🔹 Seçili Gün Mood Listesi
+                let todaysMoods = moodEntries.filter { calendar.isDate($0.date, inSameDayAs: selectedDate) }
+                if todaysMoods.isEmpty {
+                    Text("Bu gün için mood girişi yok.")
+                        .foregroundColor(.white.opacity(0.7))
+                        .padding(.top, 10)
+                } else {
+                    List(todaysMoods) { entry in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(entry.mood)
+                                    .font(.title)
+                                Spacer()
+                                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
+                            if !entry.note.isEmpty {
+                                Text(entry.note)
+                                    .foregroundColor(.white)
                                     .font(.body)
-                                    .foregroundColor(isSelected ? .white : .primary)
-                            } else {
-                                Text("")
-                                    .frame(width: 36, height: 36)
                             }
                         }
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Circle()
-                                .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
-                        )
+                        .padding(.vertical, 4)
+                        .listRowBackground(Color.black.opacity(0.2))
                     }
-                    .disabled(isPlaceholder)
+                    .frame(height: 200)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
                 }
             }
-            .padding(.bottom)
-
-            Divider()
-
-            // 🔹 Seçili Gün Mood Listesi
-            let todaysMoods = moodEntries.filter { calendar.isDate($0.date, inSameDayAs: selectedDate) }
-            if todaysMoods.isEmpty {
-                Text("Bu gün için mood girişi yok.")
-                    .foregroundColor(.gray)
-                    .padding(.top, 10)
-            } else {
-                List(todaysMoods) { entry in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(entry.mood)
-                                .font(.title)
-                            Spacer()
-                            Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        if !entry.note.isEmpty {
-                            Text(entry.note)
-                                .font(.body)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .frame(height: 200)
-                .listStyle(.plain)
-            }
+            .padding()
         }
-        .padding()
         .onAppear {
             selectedDate = Date()
         }

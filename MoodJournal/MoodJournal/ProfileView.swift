@@ -5,64 +5,94 @@ import UserNotifications
 struct ProfileView: View {
     @EnvironmentObject var authVM: AuthViewModel
 
-    // 🔔 Bildirimle ilgili durumlar
     @State private var notificationsEnabled = false
     @State private var notificationTime = Date()
     @State private var showSaveSuccess = false
 
     var body: some View {
         NavigationView {
-            Form {
-                // 👤 Kullanıcı Bilgileri
-                Section(header: Text("Hesap Bilgileri")) {
-                    if let email = authVM.user?.email {
-                        HStack {
-                            Text("Email")
-                            Spacer()
-                            Text(email)
-                                .foregroundColor(.gray)
-                                .font(.subheadline)
+            ZStack {
+                // 🎨 Arka plan gradient
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+
+                        // 👤 Kullanıcı Bilgileri
+                        ProfileCard(title: "👤 Hesap Bilgileri") {
+                            if let email = authVM.user?.email {
+                                InfoRow(label: "Email", value: email)
+                            } else {
+                                Text("Kullanıcı bilgisi alınamadı.")
+                                    .foregroundColor(.red)
+                            }
                         }
-                    } else {
-                        Text("Kullanıcı bilgisi alınamadı.")
-                            .foregroundColor(.red)
-                    }
-                }
 
-                // 🔧 İşlemler
-                Section(header: Text("İşlemler")) {
-                    NavigationLink("Şifreyi Değiştir") {
-                        ChangePasswordView()
-                    }
-
-                    Button("Çıkış Yap", role: .destructive) {
-                        authVM.signOut()
-                    }
-                }
-
-                // 🔔 Bildirim Ayarları
-                Section(header: Text("Bildirim Ayarları")) {
-                    Toggle("Bildirimleri Aç", isOn: $notificationsEnabled)
-
-                    if notificationsEnabled {
-                        DatePicker("Saat Seç", selection: $notificationTime, displayedComponents: .hourAndMinute)
-
-                        Button(action: saveNotificationSettings) {
-                            Text("Bildirimleri Kaydet")
-                                .frame(maxWidth: .infinity)
-                                .padding()
+                        // ⚙️ İşlemler
+                        ProfileCard(title: "⚙️ İşlemler") {
+                            NavigationLink(destination: ChangePasswordView()) {
+                                HStack {
+                                    Image(systemName: "key.fill")
+                                    Text("Şifreyi Değiştir")
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                }
                                 .foregroundColor(.white)
-                                .background(Color.blue)
-                                .cornerRadius(10)
-                        }
-                        .padding(.top)
+                                .padding(.vertical, 8)
+                            }
 
-                        if showSaveSuccess {
-                            Text("✅ Bildirim ayarları kaydedildi!")
-                                .foregroundColor(.green)
-                                .font(.footnote)
+                            Button(role: .destructive) {
+                                authVM.signOut()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right.fill")
+                                    Text("Çıkış Yap")
+                                    Spacer()
+                                }
+                                .foregroundColor(.red)
+                                .padding(.vertical, 8)
+                            }
+                        }
+
+                        // 🔔 Bildirim Ayarları
+                        ProfileCard(title: "🔔 Bildirim Ayarları") {
+                            Toggle("Bildirimleri Aç", isOn: $notificationsEnabled)
+                                .toggleStyle(SwitchToggleStyle(tint: .blue))
+                                .padding(.bottom, 8)
+
+                            if notificationsEnabled {
+                                DatePicker("Bildirim Saati", selection: $notificationTime, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .accentColor(.white)
+
+                                Button(action: saveNotificationSettings) {
+                                    Text("💾 Bildirimleri Kaydet")
+                                        .fontWeight(.semibold)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                        .shadow(radius: 4)
+                                }
+                                .padding(.top)
+
+                                if showSaveSuccess {
+                                    Text("✅ Bildirim ayarları kaydedildi!")
+                                        .foregroundColor(.green)
+                                        .font(.footnote)
+                                        .padding(.top, 6)
+                                }
+                            }
                         }
                     }
+                    .padding()
+                    .foregroundColor(.white)
                 }
             }
             .navigationTitle("Profil")
@@ -70,18 +100,15 @@ struct ProfileView: View {
         }
     }
 
-    // 🔔 Bildirimleri ayarla
+    // 🔧 Bildirim Kaydetme
     func saveNotificationSettings() {
         if notificationsEnabled {
             let calendar = Calendar.current
             let hour = calendar.component(.hour, from: notificationTime)
             let minute = calendar.component(.minute, from: notificationTime)
-
             NotificationManager.shared.scheduleDailyNotification(at: hour, minute: minute)
-            print("📬 Bildirim açıldı: \(hour):\(minute)")
         } else {
             NotificationManager.shared.cancelNotifications()
-            print("🔕 Bildirimler kapatıldı")
         }
 
         showSaveSuccess = true
@@ -96,6 +123,48 @@ struct ProfileView: View {
             DispatchQueue.main.async {
                 self.notificationsEnabled = requests.contains { $0.identifier == "dailyMoodReminder" }
             }
+        }
+    }
+}
+
+struct ProfileCard<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .padding(.bottom, 4)
+
+            content
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+                .background(.ultraThinMaterial.opacity(0.1))
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+        )
+    }
+}
+
+struct InfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value)
+                .foregroundColor(.gray)
+                .font(.subheadline)
         }
     }
 }

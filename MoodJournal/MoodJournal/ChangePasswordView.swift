@@ -13,57 +13,73 @@ struct ChangePasswordView: View {
     @State private var showAlert = false
 
     var body: some View {
-        Form {
-            Section(header: Text("Mevcut Şifre")) {
-                SecureField("Şu anki şifreniz", text: $currentPassword)
-            }
+        ZStack {
+            // 🎨 Arka plan
+            LinearGradient(
+                gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-            Section(header: Text("Yeni Şifre")) {
-                SecureField("Yeni şifre", text: $newPassword)
-                SecureField("Yeni şifre (tekrar)", text: $confirmPassword)
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("🔒 Şifre Değiştir")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
 
-                if !newPassword.isEmpty && newPassword.count < 6 {
-                    Text("Yeni şifre en az 6 karakter olmalı.")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
+                    Group {
+                        PasswordField(title: "Mevcut Şifre", text: $currentPassword)
+                        PasswordField(title: "Yeni Şifre", text: $newPassword)
+                        PasswordField(title: "Yeni Şifre (Tekrar)", text: $confirmPassword)
+                    }
 
-                if !confirmPassword.isEmpty && newPassword != confirmPassword {
-                    Text("Yeni şifreler eşleşmiyor.")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-            }
+                    // 🟥 Hata Uyarıları
+                    if !newPassword.isEmpty && newPassword.count < 6 {
+                        Text("Yeni şifre en az 6 karakter olmalı.")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
 
-            Section {
-                Button(action: updatePassword) {
-                    HStack {
-                        Spacer()
-                        if isProcessing {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
+                    if !confirmPassword.isEmpty && newPassword != confirmPassword {
+                        Text("Yeni şifreler eşleşmiyor.")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+
+                    Button(action: updatePassword) {
+                        HStack {
+                            if isProcessing {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .padding(.trailing, 6)
+                            }
                             Text("Şifreyi Güncelle")
                                 .fontWeight(.semibold)
                         }
-                        Spacer()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isFormValid ? Color.blue : Color.gray)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 4)
                     }
-                    .padding()
-                    .foregroundColor(.white)
-                    .background(Color.purple)
-                    .cornerRadius(10)
-                }
-                .disabled(!isFormValid || isProcessing)
-            }
+                    .disabled(!isFormValid || isProcessing)
 
-            if let message = message {
-                Section {
-                    Text(message)
-                        .foregroundColor(message.contains("✅") ? .green : .red)
+                    if let message = message {
+                        Text(message ?? "")
+                            .foregroundColor(message.contains("✅") ? .green : .red)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
+                            .transition(.opacity)
+                    }
+
+                    Spacer()
                 }
+                .padding()
             }
         }
-        .navigationTitle("Şifreyi Değiştir")
         .alert("Bilgilendirme", isPresented: $showAlert) {
             Button("Tamam") {
                 if message?.contains("başarıyla") == true {
@@ -112,5 +128,21 @@ struct ChangePasswordView: View {
                 showAlert = true
             }
         }
+    }
+}
+
+// 🔒 Ortak şifre alanı tasarımı
+struct PasswordField: View {
+    let title: String
+    @Binding var text: String
+
+    var body: some View {
+        SecureField(title, text: $text)
+            .padding()
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(12)
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2)))
+            .foregroundColor(.white)
+            .autocapitalization(.none)
     }
 }
