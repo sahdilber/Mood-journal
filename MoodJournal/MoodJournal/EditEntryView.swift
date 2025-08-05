@@ -11,9 +11,10 @@ struct EditEntryView: View {
     let firestoreService = FirestoreService()
     let entry: MoodEntry
 
-    var onEntryUpdated: (() -> Void)?
+    // 🔁 Güncellenen mood’u geri döndür
+    var onEntryUpdated: ((MoodEntry) -> Void)?
 
-    init(entry: MoodEntry, onEntryUpdated: (() -> Void)? = nil) {
+    init(entry: MoodEntry, onEntryUpdated: ((MoodEntry) -> Void)? = nil) {
         self.entry = entry
         _selectedMood = State(initialValue: entry.mood)
         _note = State(initialValue: entry.note)
@@ -23,7 +24,7 @@ struct EditEntryView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // 🎨 Gradient arka plan
+                // 🎨 Arka plan
                 LinearGradient(
                     gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
                     startPoint: .topLeading,
@@ -38,7 +39,7 @@ struct EditEntryView: View {
                         .foregroundColor(.white)
                         .padding(.top)
 
-                    // Mood seçenekleri
+                    // 😊 Mood seçenekleri
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
                             ForEach(moodOptions, id: \.self) { mood in
@@ -61,20 +62,33 @@ struct EditEntryView: View {
                         .padding(.horizontal)
                     }
 
-                    // Not güncelleme alanı
-                    TextField("Notunu güncelle...", text: $note, axis: .vertical)
-                        .lineLimit(3...5)
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.white.opacity(0.2))
-                        )
-                        .cornerRadius(14)
-                        .foregroundColor(.white)
-                        .padding(.horizontal)
+                    // ✍️ Not alanı (sorunsuz TextEditor)
+                    ZStack(alignment: .topLeading) {
+                        if note.isEmpty {
+                            Text("Notunu güncelle...")
+                                .foregroundColor(.white.opacity(0.3))
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 20)
+                        }
 
-                    // Kaydet butonu
+                        TextEditor(text: $note)
+                            .padding(12)
+                            .frame(minHeight: 120)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.white.opacity(0.05)) // 👈 Siyahı engeller
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                            .foregroundColor(.white)
+                            .font(.body)
+                            .scrollContentBackground(.hidden) // 👈 iOS 16+ için önemli
+                    }
+                    .padding(.horizontal)
+
+                    // 💾 Kaydet butonu
                     Button(action: updateEntry) {
                         HStack {
                             if isSaving {
@@ -117,7 +131,7 @@ struct EditEntryView: View {
                 isSaving = false
                 switch result {
                 case .success:
-                    onEntryUpdated?()
+                    onEntryUpdated?(updatedEntry)
                     dismiss()
                 case .failure(let error):
                     print("❌ Güncelleme hatası: \(error.localizedDescription)")

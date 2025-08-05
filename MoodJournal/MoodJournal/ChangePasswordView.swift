@@ -68,7 +68,7 @@ struct ChangePasswordView: View {
                     .disabled(!isFormValid || isProcessing)
 
                     if let message = message {
-                        Text(message ?? "")
+                        Text(message)
                             .foregroundColor(message.contains("✅") ? .green : .red)
                             .multilineTextAlignment(.center)
                             .padding(.top, 8)

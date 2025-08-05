@@ -6,14 +6,13 @@ struct HomeView: View {
     @State private var showStatistics = false
     @State private var errorMessage: String?
     @State private var listID = UUID()
-    @State private var selectedEntryForEdit: MoodEntry?
+    @State private var selectedEntry: MoodEntry?
 
     let firestoreService = FirestoreService()
 
     var body: some View {
         NavigationView {
             ZStack(alignment: .bottomTrailing) {
-                // 🎨 Gradient arka plan
                 LinearGradient(
                     gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
                     startPoint: .topLeading,
@@ -36,7 +35,6 @@ struct HomeView: View {
                                 .scaledToFit()
                                 .frame(width: 60, height: 60)
                                 .foregroundColor(.white.opacity(0.5))
-
                             Text("Hiç mood girişi yok.")
                                 .foregroundColor(.white.opacity(0.8))
                         }
@@ -44,25 +42,26 @@ struct HomeView: View {
                     } else {
                         List {
                             ForEach(moodEntries) { entry in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack(alignment: .center, spacing: 16) {
-                                        // Emoji (Mood)
+                                Button {
+                                    selectedEntry = entry
+                                } label: {
+                                    HStack(alignment: .top, spacing: 16) {
                                         Text(entry.mood)
                                             .font(.system(size: 34))
 
                                         VStack(alignment: .leading, spacing: 6) {
-                                            if !entry.note.isEmpty {
-                                                Text(entry.note)
-                                                    .font(.system(size: 16, weight: .medium))
-                                                    .foregroundColor(.white)
-                                                    .lineLimit(2)
-                                            }
+                                            Text(entry.note)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.white)
+                                                .lineLimit(2)
                                             Text(entry.date.formatted(date: .abbreviated, time: .shortened))
                                                 .font(.caption)
                                                 .foregroundColor(.white.opacity(0.6))
                                         }
 
                                         Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .foregroundColor(.white.opacity(0.3))
                                     }
                                     .padding()
                                     .background(
@@ -78,14 +77,10 @@ struct HomeView: View {
                                             )
                                             .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                                     )
-                                    .onTapGesture {
-                                        selectedEntryForEdit = entry
-                                    }
                                 }
-                                .padding(.vertical, 4)
                                 .listRowBackground(Color.clear)
+                                .buttonStyle(PlainButtonStyle())
                             }
-                            .onDelete(perform: deleteMood)
                         }
                         .id(listID)
                         .listStyle(.plain)
@@ -95,7 +90,6 @@ struct HomeView: View {
                 }
                 .padding()
 
-                // ➕ Yeni mood ekle butonu
                 Button(action: {
                     showNewEntry = true
                 }) {
@@ -127,24 +121,26 @@ struct HomeView: View {
                     fetchEntries()
                 }
             }
-            .sheet(item: $selectedEntryForEdit) { entry in
-                EditEntryView(entry: entry) {
-                    selectedEntryForEdit = nil
-                    fetchEntries()
-                    listID = UUID()
-                }
+            .sheet(item: $selectedEntry) { entry in
+                MoodDetailView(
+                    entry: entry,
+                    onDelete: {
+                        selectedEntry = nil
+                        fetchEntries()
+                    },
+                    onEdit: { updatedEntry in
+                        if let index = moodEntries.firstIndex(where: { $0.id == updatedEntry.id }) {
+                            moodEntries[index] = updatedEntry
+                            listID = UUID()
+                        }
+                        selectedEntry = nil
+                    }
+                )
             }
             .sheet(isPresented: $showStatistics) {
                 StatisticsView()
             }
-            .onAppear {
-                fetchEntries()
-            }
-            .onChange(of: showNewEntry) {
-                if !showNewEntry {
-                    fetchEntries()
-                }
-            }
+            .onAppear(perform: fetchEntries)
         }
     }
 
@@ -157,21 +153,6 @@ struct HomeView: View {
                     self.listID = UUID()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    func deleteMood(at offsets: IndexSet) {
-        let entriesToDelete = offsets.map { moodEntries[$0] }
-
-        firestoreService.deleteMultipleMoodEntries(entriesToDelete) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    fetchEntries()
-                case .failure(let error):
-                    self.errorMessage = "Silme hatası: \(error.localizedDescription)"
                 }
             }
         }

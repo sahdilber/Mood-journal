@@ -5,6 +5,7 @@ import UserNotifications
 @main
 struct MoodJournalApp: App {
     @StateObject private var authVM = AuthViewModel()
+    @State private var showSplash = true
 
     init() {
         // 🔥 Firebase başlatılır
@@ -17,12 +18,24 @@ struct MoodJournalApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(authVM)
+            if showSplash {
+                SplashScreenView()
+                    .onAppear {
+                        // ⏳ 2.5 saniye sonra splash kapanır
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            withAnimation {
+                                showSplash = false
+                            }
+                        }
+                    }
+            } else {
+                ContentView()
+                    .environmentObject(authVM)
+            }
         }
     }
 
-    // 🔐 Uygulama başlarken izin iste
+    // 🔐 Bildirim izni
     private func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error = error {
