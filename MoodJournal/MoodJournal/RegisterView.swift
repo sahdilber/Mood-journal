@@ -8,6 +8,16 @@ struct RegisterView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.dismiss) var dismiss
 
+    var isEmailValid: Bool {
+        let emailFormat = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+        return NSPredicate(format:"SELF MATCHES %@", emailFormat).evaluate(with: email)
+    }
+
+    var isPasswordStrong: Bool {
+        let passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$"
+        return NSPredicate(format: "SELF MATCHES %@", passwordRegex).evaluate(with: password)
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -45,7 +55,7 @@ struct RegisterView: View {
                         HStack {
                             Image(systemName: "lock")
                                 .foregroundColor(.gray)
-                            SecureField("Şifre (min 6 karakter)", text: $password)
+                            SecureField("Şifre (min 8 karakter, büyük harf, rakam)", text: $password)
                         }
                         .padding()
                         .background(Color.white.opacity(0.1))
@@ -73,13 +83,18 @@ struct RegisterView: View {
                     }
 
                     Button(action: {
-                        guard password == confirmPassword else {
-                            authVM.errorMessage = "Şifreler uyuşmuyor!"
+                        guard isEmailValid else {
+                            authVM.errorMessage = "Geçerli bir e-posta adresi girin."
                             return
                         }
 
-                        guard password.count >= 6 else {
-                            authVM.errorMessage = "Şifre en az 6 karakter olmalı!"
+                        guard isPasswordStrong else {
+                            authVM.errorMessage = "Şifre en az 8 karakter, bir büyük harf ve bir rakam içermelidir."
+                            return
+                        }
+
+                        guard password == confirmPassword else {
+                            authVM.errorMessage = "Şifreler uyuşmuyor!"
                             return
                         }
 
