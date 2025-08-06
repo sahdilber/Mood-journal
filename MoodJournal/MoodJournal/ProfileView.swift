@@ -33,6 +33,20 @@ struct ProfileView: View {
                             }
                         }
 
+                        // 🎯 Mood Hedefleri
+                        ProfileCard(title: "🎯 Mood Hedefleri") {
+                            NavigationLink(destination: GoalsView()) {
+                                HStack {
+                                    Image(systemName: "target")
+                                    Text("Hedeflerini Görüntüle")
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                }
+                                .foregroundColor(.white)
+                                .padding(.vertical, 8)
+                            }
+                        }
+
                         // ⚙️ İşlemler
                         ProfileCard(title: "⚙️ İşlemler") {
                             NavigationLink(destination: ChangePasswordView()) {
@@ -127,6 +141,7 @@ struct ProfileView: View {
     }
 }
 
+// 📦 Ortak Profil Kart Bileşeni
 struct ProfileCard<Content: View>: View {
     let title: String
     let content: Content
@@ -154,6 +169,7 @@ struct ProfileCard<Content: View>: View {
     }
 }
 
+// 🔤 Bilgi Satırı Bileşeni
 struct InfoRow: View {
     let label: String
     let value: String

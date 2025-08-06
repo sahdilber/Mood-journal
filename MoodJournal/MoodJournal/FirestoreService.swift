@@ -5,7 +5,8 @@ import FirebaseAuth
 class FirestoreService {
     private let db = Firestore.firestore()
 
-    // Mood Ekle
+    // MARK: - MOOD ENTRIES
+
     func addMoodEntry(_ entry: MoodEntry, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(.failure(NSError(domain: "No user", code: 401)))
@@ -17,15 +18,10 @@ class FirestoreService {
             .collection("moodEntries")
             .document(entry.id)
             .setData(entry.asDictionary) { error in
-                if let error = error {
-                    completion(.failure(error))
-                } else {
-                    completion(.success(()))
-                }
+                error != nil ? completion(.failure(error!)) : completion(.success(()))
             }
     }
 
-    // Mood Güncelle
     func updateMoodEntry(_ entry: MoodEntry, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(.failure(NSError(domain: "No user", code: 401)))
@@ -37,15 +33,10 @@ class FirestoreService {
             .collection("moodEntries")
             .document(entry.id)
             .setData(entry.asDictionary, merge: true) { error in
-                if let error = error {
-                    completion(.failure(error))
-                } else {
-                    completion(.success(()))
-                }
+                error != nil ? completion(.failure(error!)) : completion(.success(()))
             }
     }
 
-    // Mood Listele
     func fetchMoodEntries(completion: @escaping (Result<[MoodEntry], Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(.failure(NSError(domain: "No user", code: 401)))
@@ -62,15 +53,14 @@ class FirestoreService {
                     return
                 }
 
-                let entries: [MoodEntry] = snapshot?.documents.compactMap { doc in
-                    MoodEntry(from: doc.data(), documentID: doc.documentID)
+                let entries = snapshot?.documents.compactMap {
+                    MoodEntry(from: $0.data(), documentID: $0.documentID)
                 } ?? []
 
                 completion(.success(entries))
             }
     }
 
-    // Mood Sil
     func deleteMoodEntry(_ entry: MoodEntry, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(.failure(NSError(domain: "No user", code: 401)))
@@ -82,15 +72,10 @@ class FirestoreService {
             .collection("moodEntries")
             .document(entry.id)
             .delete { error in
-                if let error = error {
-                    completion(.failure(error))
-                } else {
-                    completion(.success(()))
-                }
+                error != nil ? completion(.failure(error!)) : completion(.success(()))
             }
     }
 
-    // Çoklu Mood Sil
     func deleteMultipleMoodEntries(_ entries: [MoodEntry], completion: @escaping (Result<Void, Error>) -> Void) {
         let group = DispatchGroup()
         var deletionError: Error?
@@ -106,11 +91,82 @@ class FirestoreService {
         }
 
         group.notify(queue: .main) {
-            if let error = deletionError {
-                completion(.failure(error))
-            } else {
-                completion(.success(()))
+            deletionError != nil ? completion(.failure(deletionError!)) : completion(.success(()))
+        }
+    }
+
+    // MARK: - MOOD GOALS (Belge bazlı)
+
+    func addMoodGoal(_ goal: MoodGoal, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(NSError(domain: "No user", code: 401)))
+            return
+        }
+
+        db.collection("users")
+            .document(uid)
+            .collection("moodGoals")
+            .document(goal.id)
+            .setData(goal.asDictionary) { error in
+                error != nil ? completion(.failure(error!)) : completion(.success(()))
             }
+    }
+
+    func fetchMoodGoals(completion: @escaping (Result<[MoodGoal], Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(NSError(domain: "No user", code: 401)))
+            return
+        }
+
+        db.collection("users")
+            .document(uid)
+            .collection("moodGoals")
+            .order(by: "createdAt", descending: true)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                let goals: [MoodGoal] = snapshot?.documents.compactMap {
+                    MoodGoal(from: $0.data())
+                } ?? []
+
+                completion(.success(goals))
+            }
+    }
+
+    func deleteMoodGoal(_ goal: MoodGoal, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(.failure(NSError(domain: "No user", code: 401)))
+            return
+        }
+
+        db.collection("users")
+            .document(uid)
+            .collection("moodGoals")
+            .document(goal.id)
+            .delete { error in
+                error != nil ? completion(.failure(error!)) : completion(.success(()))
+            }
+    }
+
+    func deleteMultipleMoodGoals(_ goals: [MoodGoal], completion: @escaping (Result<Void, Error>) -> Void) {
+        let group = DispatchGroup()
+        var deletionError: Error?
+
+        for goal in goals {
+            group.enter()
+            deleteMoodGoal(goal) { result in
+                if case .failure(let error) = result {
+                    deletionError = error
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            deletionError != nil ? completion(.failure(deletionError!)) : completion(.success(()))
         }
     }
 }

@@ -6,26 +6,32 @@ struct MoodEntry: Identifiable, Equatable {
     let mood: String
     let note: String
     let date: Date
+    let goalIds: [String] // ✅ küçük 'i'
 
-    // Firestore’a gönderilecek sözlük formatı
     var asDictionary: [String: Any] {
         return [
             "id": id,
             "mood": mood,
             "note": note,
-            "date": Timestamp(date: date)
+            "date": Timestamp(date: date),
+            "goalIDs": goalIds // Firestore'da yine büyük I ile saklanıyor
         ]
     }
 
-    // Uygulama içi kullanım için initializer
-    init(id: String = UUID().uuidString, mood: String, note: String, date: Date = Date()) {
+    init(
+        id: String = UUID().uuidString,
+        mood: String,
+        note: String,
+        date: Date = Date(),
+        goalIds: [String] = []
+    ) {
         self.id = id
         self.mood = mood
         self.note = note
         self.date = date
+        self.goalIds = goalIds
     }
 
-    // Firestore'dan gelen veriyle model oluşturma
     init?(from dict: [String: Any], documentID: String) {
         guard let mood = dict["mood"] as? String,
               let note = dict["note"] as? String,
@@ -37,13 +43,14 @@ struct MoodEntry: Identifiable, Equatable {
         self.mood = mood
         self.note = note
         self.date = timestamp.dateValue()
+        self.goalIds = dict["goalIDs"] as? [String] ?? [] // ❗️Firestore'da key büyük I ile
     }
 
-    // 🔁 Artık içeriği değiştiğinde SwiftUI güncellemeyi fark edecek
     static func == (lhs: MoodEntry, rhs: MoodEntry) -> Bool {
         return lhs.id == rhs.id &&
                lhs.mood == rhs.mood &&
                lhs.note == rhs.note &&
-               lhs.date == rhs.date
+               lhs.date == rhs.date &&
+               lhs.goalIds == rhs.goalIds
     }
 }

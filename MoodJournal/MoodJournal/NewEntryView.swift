@@ -2,20 +2,22 @@ import SwiftUI
 
 struct NewEntryView: View {
     @Environment(\.dismiss) var dismiss
+
     @State private var selectedMood = ""
     @State private var note = ""
     @State private var isSaving = false
     @State private var showMoodAlert = false
 
+    @State private var moodGoals: [MoodGoal] = []
+    @State private var selectedGoalIDs: Set<String> = []
+
     let moodOptions = ["😊", "😔", "😠", "😴", "🥳", "😢", "😇"]
     let firestoreService = FirestoreService()
-
     var onEntryAdded: (() -> Void)?
 
     var body: some View {
         NavigationView {
             ZStack {
-                // 🎨 Arka plan
                 LinearGradient(
                     gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
                     startPoint: .topLeading,
@@ -29,14 +31,12 @@ struct NewEntryView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
 
-                    // Seçili mood büyük göster
                     if !selectedMood.isEmpty {
                         Text(selectedMood)
                             .font(.system(size: 72))
                             .transition(.scale)
                     }
 
-                    // Mood seçenekleri
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
                             ForEach(moodOptions, id: \.self) { mood in
@@ -60,6 +60,44 @@ struct NewEntryView: View {
                         .padding(.horizontal)
                     }
 
+                    // 🎯 Hedef seçimi alanı
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Bugün hangi hedefleri gerçekleştirdin?")
+                            .font(.headline)
+                            .foregroundColor(.white)
+
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
+                            ForEach(moodGoals) { goal in
+                                Button(action: {
+                                    toggleGoal(goal.id)
+                                }) {
+                                    VStack(spacing: 4) {
+                                        Text(goal.emoji)
+                                            .font(.system(size: 28))
+
+                                        Text(goal.title)
+                                            .font(.caption)
+                                            .multilineTextAlignment(.center)
+                                            .foregroundColor(.white)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(
+                                        selectedGoalIDs.contains(goal.id) ?
+                                            Color.green.opacity(0.2) :
+                                            Color.white.opacity(0.05)
+                                    )
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(selectedGoalIDs.contains(goal.id) ? Color.green : Color.clear, lineWidth: 2)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+
                     // Not alanı
                     TextField("Kısa bir not ekle...", text: $note, axis: .vertical)
                         .lineLimit(3...5)
@@ -75,7 +113,6 @@ struct NewEntryView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal)
 
-                    // Uyarı mesajı
                     if showMoodAlert {
                         Text("Lütfen önce bir mood seç.")
                             .font(.caption)
@@ -83,7 +120,6 @@ struct NewEntryView: View {
                             .transition(.opacity)
                     }
 
-                    // Kaydet butonu
                     Button(action: saveEntry) {
                         Text("Kaydet")
                             .fontWeight(.bold)
@@ -106,6 +142,25 @@ struct NewEntryView: View {
                 .navigationBarTitleDisplayMode(.inline)
             }
         }
+        .onAppear(perform: fetchGoals)
+    }
+
+    func toggleGoal(_ id: String) {
+        if selectedGoalIDs.contains(id) {
+            selectedGoalIDs.remove(id)
+        } else {
+            selectedGoalIDs.insert(id)
+        }
+    }
+
+    func fetchGoals() {
+        firestoreService.fetchMoodGoals { result in
+            DispatchQueue.main.async {
+                if case .success(let goals) = result {
+                    self.moodGoals = goals
+                }
+            }
+        }
     }
 
     func saveEntry() {
@@ -117,7 +172,11 @@ struct NewEntryView: View {
         }
 
         isSaving = true
-        let newEntry = MoodEntry(mood: selectedMood, note: note)
+        let newEntry = MoodEntry(
+            mood: selectedMood,
+            note: note,
+            goalIds: Array(selectedGoalIDs)
+        )
 
         firestoreService.addMoodEntry(newEntry) { result in
             DispatchQueue.main.async {
@@ -125,6 +184,7 @@ struct NewEntryView: View {
                 switch result {
                 case .success:
                     onEntryAdded?()
+                    dismiss()
                 case .failure(let error):
                     print("❌ Kayıt hatası: \(error.localizedDescription)")
                 }

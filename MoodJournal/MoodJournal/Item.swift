@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 
+// SwiftData ile kullanılan örnek veri modeli (gerekiyorsa ileride silinebilir)
 @Model
 final class Item {
     var timestamp: Date
@@ -16,3 +17,4 @@ final class Item {
         self.timestamp = timestamp
     }
 }
+

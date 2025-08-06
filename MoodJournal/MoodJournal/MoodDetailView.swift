@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MoodDetailView: View {
     let entry: MoodEntry
+    @State var allGoals: [MoodGoal] = [] // ✅ let yerine @State yaptık
+
     var onDelete: (() -> Void)?
     var onEdit: ((MoodEntry) -> Void)?
 
@@ -11,7 +13,6 @@ struct MoodDetailView: View {
 
     var body: some View {
         ZStack {
-            // 🎨 Arka plan
             LinearGradient(
                 gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.black]),
                 startPoint: .topLeading,
@@ -20,17 +21,34 @@ struct MoodDetailView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 20) {
-                // 😊 Mood
                 Text(entry.mood)
                     .font(.system(size: 80))
                     .padding(.top)
 
-                // 📅 Tarih
                 Text(entry.date.formatted(date: .abbreviated, time: .shortened))
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.6))
 
-                // ✍️ Not alanı
+                // 🎯 Hedefler gösterimi
+                if !entry.goalIds.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(allGoals.filter { entry.goalIds.contains($0.id) }) { goal in
+                                HStack {
+                                    Text(goal.emoji)
+                                    Text(goal.title)
+                                        .font(.subheadline)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.08))
+                                .cornerRadius(10)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+
                 if !entry.note.isEmpty {
                     ScrollView {
                         Text(entry.note)
@@ -52,7 +70,6 @@ struct MoodDetailView: View {
 
                 Spacer()
 
-                // 🛠️ Butonlar
                 HStack(spacing: 20) {
                     Button {
                         showEdit = true
@@ -85,15 +102,17 @@ struct MoodDetailView: View {
         .navigationTitle("Mood Detayı")
         .navigationBarTitleDisplayMode(.inline)
 
-        // ✏️ Edit Sheet
+        .onAppear {
+            fetchGoals()
+        }
+
         .sheet(isPresented: $showEdit) {
-            EditEntryView(entry: entry) { updatedEntry in
+            EditEntryView(entry: entry, allGoals: allGoals) { updatedEntry in
                 onEdit?(updatedEntry)
                 dismiss()
             }
         }
 
-        // 🗑️ Silme Alert
         .alert("Bu mood silinsin mi?", isPresented: $showDeleteAlert) {
             Button("Sil", role: .destructive) {
                 FirestoreService().deleteMoodEntry(entry) { _ in
@@ -102,6 +121,16 @@ struct MoodDetailView: View {
                 }
             }
             Button("Vazgeç", role: .cancel) { }
+        }
+    }
+
+    func fetchGoals() {
+        FirestoreService().fetchMoodGoals { result in
+            DispatchQueue.main.async {
+                if case .success(let goals) = result {
+                    self.allGoals = goals
+                }
+            }
         }
     }
 }
