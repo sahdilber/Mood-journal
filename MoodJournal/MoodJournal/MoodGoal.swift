@@ -5,8 +5,8 @@ struct MoodGoal: Identifiable, Codable, Equatable {
     var title: String
     var emoji: String
     var createdAt: Date
-    var completedDates: [Date]      // Başarıyla tamamlanan günlerin listesi
-    var targetCount: Int            // Kaç gün boyunca hedef yapılmak isteniyor
+    var completedDates: [Date]      // Tamamlanan günler
+    var targetCount: Int            // Kaç gün hedefleniyor
 
     init(
         id: String = UUID().uuidString,
@@ -14,7 +14,7 @@ struct MoodGoal: Identifiable, Codable, Equatable {
         emoji: String,
         createdAt: Date = Date(),
         completedDates: [Date] = [],
-        targetCount: Int = 30        // Öntanımlı hedef süresi: 30 gün
+        targetCount: Int = 30
     ) {
         self.id = id
         self.title = title
@@ -55,13 +55,30 @@ struct MoodGoal: Identifiable, Codable, Equatable {
         self.targetCount = targetCount
     }
 
-    // 🔢 İlerleme yüzdesi (0.0 - 1.0 arası)
+    // 🔢 Benzersiz gün sayısı
+    var uniqueDaysCount: Int {
+        let calendar = Calendar.current
+        let uniqueDays = Set(completedDates.map { calendar.startOfDay(for: $0) })
+        return uniqueDays.count
+    }
+
+    // 🔢 İlerleme yüzdesi
     var completionRate: Double {
-        Double(completedDates.count) / Double(targetCount)
+        Double(uniqueDaysCount) / Double(targetCount)
     }
 
     // 🎯 Hedef tamamlandı mı?
     var isCompleted: Bool {
-        completedDates.count >= targetCount
+        uniqueDaysCount >= targetCount
+    }
+
+    // ➕ Yeni gün ekle (aynı gün eklenmesin)
+    mutating func addCompletion(for date: Date) {
+        let calendar = Calendar.current
+        let newDay = calendar.startOfDay(for: date)
+        let days = completedDates.map { calendar.startOfDay(for: $0) }
+        if !days.contains(newDay) {
+            completedDates.append(date)
+        }
     }
 }

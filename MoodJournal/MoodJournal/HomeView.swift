@@ -97,18 +97,21 @@ struct HomeView: View {
             }
 
             if moodEntries.isEmpty {
-                Spacer()
                 VStack(spacing: 12) {
                     Image(systemName: "face.smiling")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 60, height: 60)
                         .foregroundColor(.white.opacity(0.5))
+
                     Text("Hiç mood girişi yok.")
                         .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
                 }
-                Spacer()
-            } else {
+                .frame(maxWidth: .infinity, maxHeight: .infinity)   // ⬅️ Hem yatay hem dikey merkezler
+                .contentShape(Rectangle())
+            }
+            else {
                 List {
                     ForEach(moodEntries) { entry in
                         Button {

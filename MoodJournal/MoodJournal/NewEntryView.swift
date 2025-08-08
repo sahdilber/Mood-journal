@@ -9,7 +9,7 @@ struct NewEntryView: View {
     @State private var showMoodAlert = false
 
     @State private var moodGoals: [MoodGoal] = []
-    @State private var selectedGoalIDs: Set<String> = []
+    @State private var selectedGoalIds: Set<String> = []
 
     let moodOptions = ["😊", "😔", "😠", "😴", "🥳", "😢", "😇"]
     let firestoreService = FirestoreService()
@@ -27,8 +27,7 @@ struct NewEntryView: View {
 
                 VStack(spacing: 24) {
                     Text("Bugünkü modun nasıl?")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                        .font(.title2).fontWeight(.semibold)
                         .foregroundColor(.white)
 
                     if !selectedMood.isEmpty {
@@ -37,6 +36,7 @@ struct NewEntryView: View {
                             .transition(.scale)
                     }
 
+                    // Mood seçim
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
                             ForEach(moodOptions, id: \.self) { mood in
@@ -60,7 +60,7 @@ struct NewEntryView: View {
                         .padding(.horizontal)
                     }
 
-                    // 🎯 Hedef seçimi alanı
+                    // 🎯 Hedef seçimi
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Bugün hangi hedefleri gerçekleştirdin?")
                             .font(.headline)
@@ -68,13 +68,11 @@ struct NewEntryView: View {
 
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
                             ForEach(moodGoals) { goal in
-                                Button(action: {
+                                Button {
                                     toggleGoal(goal.id)
-                                }) {
+                                } label: {
                                     VStack(spacing: 4) {
-                                        Text(goal.emoji)
-                                            .font(.system(size: 28))
-
+                                        Text(goal.emoji).font(.system(size: 28))
                                         Text(goal.title)
                                             .font(.caption)
                                             .multilineTextAlignment(.center)
@@ -83,14 +81,14 @@ struct NewEntryView: View {
                                     .padding()
                                     .frame(maxWidth: .infinity)
                                     .background(
-                                        selectedGoalIDs.contains(goal.id) ?
-                                            Color.green.opacity(0.2) :
-                                            Color.white.opacity(0.05)
+                                        selectedGoalIds.contains(goal.id)
+                                        ? Color.green.opacity(0.2)
+                                        : Color.white.opacity(0.05)
                                     )
                                     .cornerRadius(12)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(selectedGoalIDs.contains(goal.id) ? Color.green : Color.clear, lineWidth: 2)
+                                            .stroke(selectedGoalIds.contains(goal.id) ? Color.green : Color.clear, lineWidth: 2)
                                     )
                                 }
                             }
@@ -98,18 +96,12 @@ struct NewEntryView: View {
                     }
                     .padding(.horizontal)
 
-                    // Not alanı
+                    // Not
                     TextField("Kısa bir not ekle...", text: $note, axis: .vertical)
                         .lineLimit(3...5)
                         .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color.white.opacity(0.08))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.08)))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.2), lineWidth: 1))
                         .foregroundColor(.white)
                         .padding(.horizontal)
 
@@ -126,9 +118,7 @@ struct NewEntryView: View {
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(colors: [Color.purple, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            )
+                            .background(LinearGradient(colors: [Color.purple, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .cornerRadius(16)
                             .shadow(radius: 6)
                     }
@@ -145,15 +135,12 @@ struct NewEntryView: View {
         .onAppear(perform: fetchGoals)
     }
 
-    func toggleGoal(_ id: String) {
-        if selectedGoalIDs.contains(id) {
-            selectedGoalIDs.remove(id)
-        } else {
-            selectedGoalIDs.insert(id)
-        }
+    private func toggleGoal(_ id: String) {
+        if selectedGoalIds.contains(id) { selectedGoalIds.remove(id) }
+        else { selectedGoalIds.insert(id) }
     }
 
-    func fetchGoals() {
+    private func fetchGoals() {
         firestoreService.fetchMoodGoals { result in
             DispatchQueue.main.async {
                 if case .success(let goals) = result {
@@ -163,11 +150,9 @@ struct NewEntryView: View {
         }
     }
 
-    func saveEntry() {
+    private func saveEntry() {
         guard !selectedMood.isEmpty else {
-            withAnimation {
-                showMoodAlert = true
-            }
+            withAnimation { showMoodAlert = true }
             return
         }
 
@@ -175,7 +160,7 @@ struct NewEntryView: View {
         let newEntry = MoodEntry(
             mood: selectedMood,
             note: note,
-            goalIds: Array(selectedGoalIDs)
+            goalIds: Array(selectedGoalIds)   // 👈 doğru anahtar
         )
 
         firestoreService.addMoodEntry(newEntry) { result in
